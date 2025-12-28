@@ -3,39 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>EQR – QR Médico</title>
+  <title>QRMEDBR — Gerador</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 12px; }
-    input, textarea, button { width: 100%; margin: 8px 0; padding: 10px; box-sizing: border-box; }
-    textarea { min-height: 90px; }
-    #qrcode { margin-top: 16px; display: flex; justify-content: center; }
-    #debug { margin-top: 12px; font-size: 12px; word-break: break-word; }
-    .err { color: #b00020; font-weight: 700; }
-    code { background: #f6f6f6; padding: 2px 4px; border-radius: 4px; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    body{font-family:Arial,sans-serif;max-width:980px;margin:24px auto;padding:0 12px}
+    h1{margin:0 0 10px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .card{border:1px solid #ddd;border-radius:12px;padding:14px;margin:12px 0}
+    label{display:block;font-size:12px;opacity:.8;margin-top:8px}
+    input,select,textarea,button{width:100%;padding:10px;box-sizing:border-box;margin-top:6px}
+    textarea{min-height:86px}
+    .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    #qrcode{display:flex;justify-content:center;margin-top:12px}
+    #debug{font-size:12px;word-break:break-word;margin-top:10px}
+    .err{color:#b00020;font-weight:700}
+    .ok{color:#137333;font-weight:700}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .actions button{width:auto}
+    code{background:#f6f6f6;padding:2px 4px;border-radius:4px}
+    .hint{font-size:12px;opacity:.8;margin-top:6px}
   </style>
 </head>
 <body>
 
-  <h2>EQR – QR Médico (Compacto)</h2>
+<h1>QRMEDBR — Gerador (v1)</h1>
+<div class="hint">
+  O QR gerado é um link HTTPS que abre <code>viewer.html</code> no navegador e exibe os dados. Os dados ficam no <code>#</code> (hash) e não são enviados ao servidor.
+</div>
 
-  <input id="nome" placeholder="Nome completo" />
-  <div class="row">
-    <input id="nascimento" placeholder="Nascimento (AAAA-MM-DD)" />
-    <input id="tipoSangue" placeholder="Tipo sanguíneo (ex: O+)" />
+<div class="card">
+  <h2 style="margin:0 0 6px">Paciente</h2>
+  <div class="grid">
+    <div>
+      <label>Nome completo *</label>
+      <input id="pt_n" placeholder="Ex: Felipe Vieira de Almeida" />
+    </div>
+    <div class="row2">
+      <div>
+        <label>Nascimento (AAAA-MM-DD) *</label>
+        <input id="pt_dob" placeholder="1998-04-12" />
+      </div>
+      <div>
+        <label>Sexo (opcional)</label>
+        <select id="pt_sex">
+          <option value="">—</option>
+          <option value="M">M</option>
+          <option value="F">F</option>
+          <option value="X">X</option>
+          <option value="U">U</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label>Endereço (curto, opcional)</label>
+      <input id="pt_addr" placeholder="Ex: Rio de Janeiro - RJ" />
+    </div>
+    <div>
+      <label>Documento (opcional — ex: CPF mascarado)</label>
+      <input id="pt_doc" placeholder="***.***.***-**" />
+    </div>
   </div>
+</div>
 
-  <textarea id="alergias" placeholder="Alergias (separe por vírgula)"></textarea>
-  <textarea id="meds" placeholder="Medicamentos (1 por linha)&#10;Ex: Losartana | 50mg | 1x/dia"></textarea>
-  <textarea id="condicoes" placeholder="Condições prévias (separe por vírgula)"></textarea>
-
-  <button id="btnGerar" type="button">Gerar QR</button>
-
-  <div id="qrcode"></div>
-  <div id="debug"></div>
-
-  <!-- IMPORTANTE: primeiro a biblioteca, depois o seu script -->
-  <script src="./qrcode.min.js"></script>
-  <script src="./script.js"></script>
-</body>
-</html>
+<div class="card">
+  <h2 style="margin:0 0 6px">Dados médicos</h2>
+  <div class="row">
+    <div>
+      <label>Tipo sanguíneo *</label>
+      <input id="med_bt" placeholder="Ex: O+" />
+    </div>
+    <div>
+      <label>Altura (cm, opcional)</label>
+      <input id="med_ht" placeholder="Ex: 178" inputmode="numeric" />
+    </div>
+    <div>
+      <label>Peso (kg, opcional)</label>
+      <input id="med_wt" placeholder="Ex: 75" inputmode="numeric" />
+    </div>
