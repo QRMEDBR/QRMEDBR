@@ -71,23 +71,10 @@
     button:active{transform:scale(.99)}
     a.tel{font-weight:800;text-decoration:none;color:var(--fg)}
     .muted{font-size:12px;color:var(--muted)}
-    .tag{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px;background:var(--subtle)}
-    .split{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-
-    /* =========================
-       Modo Socorrista (ultra-enxuto)
-       - esconde detalhes e deixa só o essencial
-       ========================= */
-    body.ems .hide-ems { display:none !important; }
-    body.ems .wrap { max-width: 820px; }
-    body.ems h1 { font-size: 16px; }
-    body.ems .val { font-size: 15px; }
-    body.ems .pill { font-size: 13px; padding: 8px 12px; }
-    body.ems .card { padding: 12px; margin: 10px 0; }
 
     /* Impressão */
     @media print{
-      button,.muted,.tag{display:none !important}
+      button,.muted{display:none !important}
       body{margin:0}
       .card{page-break-inside:avoid}
     }
@@ -97,13 +84,9 @@
 <body>
 <div class="wrap">
 
-  <!-- AÇÕES: só imprimir + alternar modo socorrista -->
-  <div class="split">
-    <div class="actions">
-      <button onclick="window.print()">Imprimir</button>
-      <button id="btnToggleEms" type="button">Modo socorrista: OFF</button>
-    </div>
-    <div class="tag" id="modeTag">Modo: Completo</div>
+  <!-- AÇÕES: apenas imprimir -->
+  <div class="actions">
+    <button onclick="window.print()">Imprimir</button>
   </div>
 
   <div class="muted">
@@ -112,7 +95,7 @@
 
   <div id="out"></div>
 
-  <!-- Aviso legal / consentimento (sempre visível, mas curto; no modo socorrista continua) -->
+  <!-- Aviso legal / consentimento -->
   <div class="card">
     <h1>Aviso legal e consentimento</h1>
     <div class="muted">
@@ -262,26 +245,7 @@ function esc(s){
     .replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
-/* ====== Modo socorrista: via ?mode=ems ou botão ====== */
-function setEmsMode(on){
-  document.body.classList.toggle("ems", !!on);
-  document.getElementById("btnToggleEms").textContent = `Modo socorrista: ${on ? "ON" : "OFF"}`;
-  document.getElementById("modeTag").textContent = `Modo: ${on ? "Socorrista" : "Completo"}`;
-
-  // Persistência local (opcional): se quiser que sempre abra em EMS após escolher
-  try { localStorage.setItem("qrmedbr_mode", on ? "ems" : "full"); } catch {}
-}
-
-function getInitialMode(){
-  const params = new URLSearchParams(location.search);
-  const q = (params.get("mode") || "").toLowerCase();
-  if (q === "ems") return true;
-
-  // fallback: preferência salva localmente
-  try { return localStorage.getItem("qrmedbr_mode") === "ems"; } catch { return false; }
-}
-
-/* ====== Render (sem botão copiar + sem bloco Dados brutos) ====== */
+/* ====== Render (sem modo socorrista, sem copiar JSON, sem bloco Dados brutos) ====== */
 function render(data){
   const out = document.getElementById("out");
 
@@ -315,7 +279,7 @@ function render(data){
     : `<p class="muted"><em>Não informado</em></p>`;
 
   const rxHtml = (Array.isArray(med.rx) && med.rx.length)
-    ? `<table class="hide-ems">
+    ? `<table>
         <thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th><th>Via</th></tr></thead>
         <tbody>
           ${med.rx.map(m=>`
@@ -326,21 +290,7 @@ function render(data){
               <td>${esc(m.r||"")}</td>
             </tr>`).join("")}
         </tbody>
-      </table>
-      <div class="muted ems-only" style="display:none"></div>`
-    : `<p class="muted"><em>Não informado</em></p>`;
-
-  // Em modo socorrista: mostramos lista simples dos meds (sem tabela) para leitura rápida
-  const rxEmsList = (Array.isArray(med.rx) && med.rx.length)
-    ? `<ul>${med.rx.map(m=>{
-        const parts = [
-          m.n ? `<b>${esc(m.n)}</b>` : "",
-          m.d ? `${esc(m.d)}` : "",
-          m.f ? `${esc(m.f)}` : "",
-          m.r ? `${esc(m.r)}` : ""
-        ].filter(Boolean).join(" — ");
-        return `<li>${parts || "—"}</li>`;
-      }).join("")}</ul>`
+      </table>`
     : `<p class="muted"><em>Não informado</em></p>`;
 
   out.innerHTML = `
@@ -350,7 +300,7 @@ function render(data){
         <div><div class="lbl">Nome</div><div class="val">${esc(pt.n) || "—"}</div></div>
         <div><div class="lbl">Nascimento</div><div class="val">${esc(pt.dob) || "—"}</div></div>
         <div><div class="lbl">Sexo</div><div class="val">${esc(sexPretty)}</div></div>
-        <div class="hide-ems"><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
+        <div><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
       </div>
 
       <div style="margin-top:10px">${pills.join("") || "<span class='muted'><em>Sem dados adicionais</em></span>"}</div>
@@ -367,29 +317,13 @@ function render(data){
       ${iceHtml}
     </div>
 
-    <div class="card hide-ems">
+    <div class="card">
       <h1>Detalhes Médicos</h1>
       <h2>Alergias</h2>${algHtml}
       <h2>Condições prévias</h2>${condHtml}
       <h2>Medicamentos em uso</h2>${rxHtml}
     </div>
-
-    <div class="card ${"hide-ems"}" id="emsMedsBlock" style="display:none">
-      <h1>Medicamentos (modo socorrista)</h1>
-      ${rxEmsList}
-    </div>
-
-    <div class="card ${"hide-ems"}" id="emsExtraBlock" style="display:none">
-      <h1>Outros</h1>
-      <h2>Alergias</h2>${algHtml}
-      <h2>Condições</h2>${condHtml}
-    </div>
   `;
-
-  // Liga/desliga blocos específicos do modo socorrista
-  const isEms = document.body.classList.contains("ems");
-  document.getElementById("emsMedsBlock").style.display = isEms ? "block" : "none";
-  document.getElementById("emsExtraBlock").style.display = isEms ? "block" : "none";
 }
 
 /* ====== Decode payload ====== */
@@ -413,18 +347,6 @@ function decodePayload(hash){
 
 /* ====== Init ====== */
 (function init(){
-  const initialEms = getInitialMode();
-  setEmsMode(initialEms);
-
-  document.getElementById("btnToggleEms").addEventListener("click", ()=>{
-    setEmsMode(!document.body.classList.contains("ems"));
-    // re-render para ajustar blocos e layout
-    try{
-      const data = decodePayload(location.hash);
-      render(data);
-    } catch {}
-  });
-
   const out = document.getElementById("out");
   try{
     const data = decodePayload(location.hash);
