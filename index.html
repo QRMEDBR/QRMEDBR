@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EQR – QR Médico</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 12px; }
+    input, textarea, button { width: 100%; margin: 8px 0; padding: 10px; box-sizing: border-box; }
+    textarea { min-height: 90px; }
+    #qrcode { margin-top: 16px; display: flex; justify-content: center; }
+    #debug { margin-top: 12px; font-size: 12px; word-break: break-word; }
+    .err { color: #b00020; font-weight: 700; }
+    code { background: #f6f6f6; padding: 2px 4px; border-radius: 4px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  </style>
+</head>
+<body>
+
+  <h2>EQR – QR Médico (Compacto)</h2>
+
+  <input id="nome" placeholder="Nome completo" />
+  <div class="row">
+    <input id="nascimento" placeholder="Nascimento (AAAA-MM-DD)" />
+    <input id="tipoSangue" placeholder="Tipo sanguíneo (ex: O+)" />
+  </div>
+
+  <textarea id="alergias" placeholder="Alergias (separe por vírgula)"></textarea>
+  <textarea id="meds" placeholder="Medicamentos (1 por linha)&#10;Ex: Losartana | 50mg | 1x/dia"></textarea>
+  <textarea id="condicoes" placeholder="Condições prévias (separe por vírgula)"></textarea>
+
+  <button id="btnGerar" type="button">Gerar QR</button>
+
+  <div id="qrcode"></div>
+  <div id="debug"></div>
+
+  <!-- IMPORTANTE: primeiro a biblioteca, depois o seu script -->
+  <script src="./qrcode.min.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
