@@ -7,28 +7,16 @@
 
   <style>
     :root{
-      --bg: #ffffff;
-      --fg: #111111;
-      --muted: rgba(0,0,0,.72);
-      --card: #ffffff;
-      --border: #dddddd;
-      --subtle: #f6f6f6;
-      --danger: #b00020;
-      --accent: #111111;
-      --pill-bg: transparent;
+      --bg:#ffffff; --fg:#111111; --muted:rgba(0,0,0,.72);
+      --card:#ffffff; --border:#dddddd; --subtle:#f6f6f6;
+      --danger:#b00020; --accent:#111111; --pill-bg:transparent;
     }
 
     @media (prefers-color-scheme: dark){
       :root{
-        --bg: #0f1115;
-        --fg: #f1f3f5;
-        --muted: rgba(241,243,245,.72);
-        --card: #151924;
-        --border: #2a3142;
-        --subtle: #1b2233;
-        --danger: #ff6b81;
-        --accent: #f1f3f5;
-        --pill-bg: rgba(241,243,245,.06);
+        --bg:#0f1115; --fg:#f1f3f5; --muted:rgba(241,243,245,.72);
+        --card:#151924; --border:#2a3142; --subtle:#1b2233;
+        --danger:#ff6b81; --accent:#f1f3f5; --pill-bg:rgba(241,243,245,.06);
       }
     }
 
@@ -49,61 +37,65 @@
     code{word-break:break-word;background:var(--subtle);padding:2px 4px;border-radius:6px}
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     button{
-      padding:10px 12px;
-      border:1px solid var(--border);
-      border-radius:10px;
-      background:var(--card);
-      color:var(--fg);
-      cursor:pointer;
+      padding:10px 12px;border:1px solid var(--border);border-radius:10px;
+      background:var(--card);color:var(--fg);cursor:pointer;
     }
     button:active{transform:scale(.99)}
     a.tel{font-weight:800;text-decoration:none;color:var(--fg)}
     .muted{font-size:12px;color:var(--muted)}
 
     /* =========================
-       NOVO: faixa de destaque (BT / Altura / Peso)
+       Destaques no 1º quadro
+       - Forte: Tipo sanguíneo, Alergias, Condições
+       - Neutro: Altura, Peso
        ========================= */
-    .vitals{
-      display:grid;
-      grid-template-columns:repeat(3, minmax(0, 1fr));
-      gap:10px;
-      margin-top:12px;
+    .topline{
+      display:flex; flex-wrap:wrap; gap:10px;
+      margin-top:12px; align-items:stretch;
     }
-    .vital{
+    .hi{
       border:2px solid var(--accent);
       border-radius:14px;
-      padding:12px;
+      padding:12px 12px;
       background: linear-gradient(180deg, var(--subtle), transparent);
+      min-width: 220px;
+      flex: 1 1 260px;
     }
-    .vital .k{
-      font-size:12px;
-      opacity:.8;
-      margin-bottom:6px;
-      letter-spacing:.2px;
-      text-transform:uppercase;
-      font-weight:700;
+    .hi .k{
+      font-size:12px; opacity:.8; letter-spacing:.2px;
+      text-transform:uppercase; font-weight:800; margin-bottom:6px;
     }
-    .vital .v{
-      font-size:26px;
-      font-weight:900;
-      line-height:1.1;
+    .hi .v{
+      font-size:18px; font-weight:900; line-height:1.2;
+      word-break:break-word;
     }
-    .vital .u{
-      font-size:12px;
-      opacity:.85;
-      margin-top:4px;
-      font-weight:700;
+
+    .metrics{
+      display:flex; flex-wrap:wrap; gap:8px;
+      align-items:center; justify-content:flex-start;
+      padding:10px 0 0;
+      flex: 1 1 260px;
+      min-width: 220px;
     }
-    @media (max-width:640px){
-      .vitals{grid-template-columns:1fr}
-      .vital .v{font-size:28px}
+    .chip{
+      display:inline-flex;
+      align-items:baseline;
+      gap:6px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 10px;
+      background: var(--pill-bg);
+      font-size:13px;
+      white-space:nowrap;
     }
+    .chip b{font-weight:800}
+    .chip .u{opacity:.75; font-size:12px; font-weight:700}
 
     @media print{
       button,.muted{display:none !important}
       body{margin:0}
       .card{page-break-inside:avoid}
-      .vital{break-inside:avoid}
+      .hi,.chip{break-inside:avoid}
     }
   </style>
 </head>
@@ -278,24 +270,34 @@ function render(data){
 
   const sexPretty = (pt.sex === "NA") ? "N/A" : (pt.sex || "—");
 
-  // ✅ Destaque forte: BT / Altura / Peso
-  const vitals = `
-    <div class="vitals">
-      <div class="vital">
+  const algInline = (Array.isArray(med.alg) && med.alg.length) ? med.alg.join(", ") : "";
+  const condInline = (Array.isArray(med.cond) && med.cond.length) ? med.cond.join(", ") : "";
+
+  // ✅ ÊNFASE: Tipo sanguíneo + Alergias + Condições
+  const highlightBlocks = `
+    <div class="topline">
+      <div class="hi">
         <div class="k">Tipo sanguíneo</div>
         <div class="v">${esc(med.bt || "—")}</div>
-        <div class="u">ABO/Rh</div>
       </div>
-      <div class="vital">
-        <div class="k">Altura</div>
-        <div class="v">${esc(med.ht ?? "—")}</div>
-        <div class="u">cm</div>
-      </div>
-      <div class="vital">
-        <div class="k">Peso</div>
-        <div class="v">${esc(med.wt ?? "—")}</div>
-        <div class="u">kg</div>
-      </div>
+      ${algInline ? `
+        <div class="hi">
+          <div class="k">Alergias</div>
+          <div class="v">${esc(algInline)}</div>
+        </div>` : ``}
+      ${condInline ? `
+        <div class="hi">
+          <div class="k">Condições</div>
+          <div class="v">${esc(condInline)}</div>
+        </div>` : ``}
+    </div>
+  `;
+
+  // ✅ SEM ÊNFASE: Altura + Peso (chips neutros)
+  const metrics = `
+    <div class="metrics">
+      <span class="chip"><b>Altura:</b> ${esc(med.ht ?? "—")} <span class="u">cm</span></span>
+      <span class="chip"><b>Peso:</b> ${esc(med.wt ?? "—")} <span class="u">kg</span></span>
     </div>
   `;
 
@@ -332,7 +334,7 @@ function render(data){
 
   out.innerHTML = `
     <div class="card emg">
-      <h1>Resumo de Emergência</h1>
+      <h1>Resumo de Emergência — QRMEDBR</h1>
       <div class="grid">
         <div><div class="lbl">Nome</div><div class="val">${esc(pt.n) || "—"}</div></div>
         <div><div class="lbl">Nascimento</div><div class="val">${esc(pt.dob) || "—"}</div></div>
@@ -340,13 +342,14 @@ function render(data){
         <div><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
       </div>
 
-      ${vitals}
+      ${highlightBlocks}
+      ${metrics}
 
       ${med.note ? `<div style="margin-top:12px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
     </div>
 
     <div class="card">
-      <h1>Contatos de Emergência</h1>
+      <h1>Contatos de Emergência (ICE)</h1>
       ${iceHtml}
     </div>
 
@@ -387,4 +390,3 @@ function decodePayload(hash){
 </script>
 </body>
 </html>
-
