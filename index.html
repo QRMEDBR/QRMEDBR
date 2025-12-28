@@ -80,3 +80,659 @@
       <label>Peso (kg, opcional)</label>
       <input id="med_wt" placeholder="Ex: 75" inputmode="numeric" />
     </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label>Alergias (separe por vírgula)</label>
+      <textarea id="med_alg" placeholder="Ex: Dipirona, Amendoim"></textarea>
+    </div>
+    <div>
+      <label>Condições prévias (separe por vírgula)</label>
+      <textarea id="med_cond" placeholder="Ex: HAS, Asma"></textarea>
+    </div>
+  </div>
+
+  <label>Medicamentos em uso (1 por linha)</label>
+  <textarea id="med_rx" placeholder="Formato: Nome | Dose | Frequência | Via(opcional)
+Ex:
+Losartana | 50mg | 1x/dia | VO
+Metformina | 850mg | 2x/dia | VO"></textarea>
+
+  <label>Observação curta (opcional)</label>
+  <input id="med_note" placeholder="Ex: Se inconsciente, contatar ICE." />
+</div>
+
+<div class="card">
+  <h2 style="margin:0 0 6px">Contatos de emergência (ICE)</h2>
+
+  <div class="grid">
+    <div>
+      <label>ICE 1 — Nome *</label>
+      <input id="ice1_n" placeholder="Ex: Maria Almeida" />
+    </div>
+    <div class="row2">
+      <div>
+        <label>ICE 1 — Parentesco</label>
+        <input id="ice1_p" placeholder="Ex: Mãe" />
+      </div>
+      <div>
+        <label>ICE 1 — Telefone * (aceita BR com DDD)</label>
+        <input id="ice1_t" placeholder="Ex: (21) 99999-9999" inputmode="tel" />
+      </div>
+    </div>
+
+    <div>
+      <label>ICE 2 — Nome (opcional)</label>
+      <input id="ice2_n" placeholder="Ex: João Almeida" />
+    </div>
+    <div class="row2">
+      <div>
+        <label>ICE 2 — Parentesco</label>
+        <input id="ice2_p" placeholder="Ex: Pai" />
+      </div>
+      <div>
+        <label>ICE 2 — Telefone</label>
+        <input id="ice2_t" placeholder="Ex: 21 98888-8888" inputmode="tel" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="actions">
+    <button id="btnGerar" type="button">Gerar QR (link HTTPS)</button>
+    <button id="btnBaixar" type="button">Baixar QR (PNG)</button>
+    <button id="btnCopiar" type="button">Copiar link</button>
+  </div>
+  <div id="qrcode"></div>
+  <div id="debug"></div>
+</div>
+
+<!-- Biblioteca QRCode.js (arquivo local na raiz) -->
+<script src="./qrcode.min.js"></script>
+
+<script>
+/**
+ * QRMEDBR — Gerador v1
+ * - JSON padrão: { v, pt, med, ice, meta }
+ * - Dados no hash: viewer.html#<payload>
+ * - payload comprimido por LZ (URL-safe)
+ */
+
+/* ========= LZ-String (somente funções usadas) =========
+   Baseado em lz-string (Pieroxy) — compressToEncodedURIComponent / decompressFromEncodedURIComponent
+   (trecho mínimo para compressão URL-safe)
+*/
+const LZString = (function() {
+  const f = String.fromCharCode;
+  const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+  const getBaseValue = (alphabet, character) => alphabet.indexOf(character);
+
+  function compressToEncodedURIComponent(input) {
+    if (input == null) return "";
+    return _compress(input, 6, a => keyStrUriSafe.charAt(a));
+  }
+  function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+    if (uncompressed == null) return "";
+    let i, value;
+    const context_dictionary = {};
+    const context_dictionaryToCreate = {};
+    let context_c = "";
+    let context_wc = "";
+    let context_w = "";
+    let context_enlargeIn = 2;
+    let context_dictSize = 3;
+    let context_numBits = 2;
+    const context_data = [];
+    let context_data_val = 0;
+    let context_data_position = 0;
+
+    for (let ii = 0; ii < uncompressed.length; ii++) {
+      context_c = uncompressed.charAt(ii);
+      if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+        context_dictionary[context_c] = context_dictSize++;
+        context_dictionaryToCreate[context_c] = true;
+      }
+      context_wc = context_w + context_c;
+      if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+        context_w = context_wc;
+      } else {
+        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+          if (context_w.charCodeAt(0) < 256) {
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1);
+              if (context_data_position === bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else context_data_position++;
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 8; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position === bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else context_data_position++;
+              value = value >> 1;
+            }
+          } else {
+            value = 1;
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1) | value;
+              if (context_data_position === bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else context_data_position++;
+              value = 0;
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 16; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position === bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else context_data_position++;
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn === 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+          delete context_dictionaryToCreate[context_w];
+        } else {
+          value = context_dictionary[context_w];
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position === bitsPerChar - 1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else context_data_position++;
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn === 0) {
+          context_enlargeIn = Math.pow(2, context_numBits);
+          context_numBits++;
+        }
+        context_dictionary[context_wc] = context_dictSize++;
+        context_w = String(context_c);
+      }
+    }
+
+    if (context_w !== "") {
+      if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+        if (context_w.charCodeAt(0) < 256) {
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1);
+            if (context_data_position === bitsPerChar - 1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else context_data_position++;
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 8; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position === bitsPerChar - 1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else context_data_position++;
+            value = value >> 1;
+          }
+        } else {
+          value = 1;
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | value;
+            if (context_data_position === bitsPerChar - 1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else context_data_position++;
+            value = 0;
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 16; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position === bitsPerChar - 1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else context_data_position++;
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn === 0) {
+          context_enlargeIn = Math.pow(2, context_numBits);
+          context_numBits++;
+        }
+        delete context_dictionaryToCreate[context_w];
+      } else {
+        value = context_dictionary[context_w];
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position === bitsPerChar - 1) {
+            context_data_position = 0;
+            context_data.push(getCharFromInt(context_data_val));
+            context_data_val = 0;
+          } else context_data_position++;
+          value = value >> 1;
+        }
+      }
+      context_enlargeIn--;
+      if (context_enlargeIn === 0) {
+        context_enlargeIn = Math.pow(2, context_numBits);
+        context_numBits++;
+      }
+    }
+
+    value = 2;
+    for (i = 0; i < context_numBits; i++) {
+      context_data_val = (context_data_val << 1) | (value & 1);
+      if (context_data_position === bitsPerChar - 1) {
+        context_data_position = 0;
+        context_data.push(getCharFromInt(context_data_val));
+        context_data_val = 0;
+      } else context_data_position++;
+      value = value >> 1;
+    }
+
+    while (true) {
+      context_data_val = (context_data_val << 1);
+      if (context_data_position === bitsPerChar - 1) {
+        context_data.push(getCharFromInt(context_data_val));
+        break;
+      } else context_data_position++;
+    }
+    return context_data.join("");
+  }
+
+  function decompressFromEncodedURIComponent(input) {
+    if (input == null) return "";
+    if (input === "") return null;
+    return _decompress(input.length, 32, index => getBaseValue(keyStrUriSafe, input.charAt(index)));
+  }
+
+  function _decompress(length, resetValue, getNextValue) {
+    const dictionary = [];
+    let next;
+    let enlargeIn = 4;
+    let dictSize = 4;
+    let numBits = 3;
+    let entry = "";
+    const result = [];
+    let i;
+    let w;
+    let bits, resb, maxpower, power;
+    let c;
+    const data = { val: getNextValue(0), position: resetValue, index: 1 };
+
+    for (i = 0; i < 3; i++) dictionary[i] = i;
+
+    bits = 0; maxpower = Math.pow(2, 2); power = 1;
+    while (power !== maxpower) {
+      resb = data.val & data.position;
+      data.position >>= 1;
+      if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+      bits |= (resb > 0 ? 1 : 0) * power;
+      power <<= 1;
+    }
+
+    switch (next = bits) {
+      case 0:
+        bits = 0; maxpower = Math.pow(2, 8); power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        c = f(bits);
+        break;
+      case 1:
+        bits = 0; maxpower = Math.pow(2, 16); power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        c = f(bits);
+        break;
+      case 2:
+        return "";
+    }
+    dictionary[3] = c;
+    w = c;
+    result.push(c);
+
+    while (true) {
+      if (data.index > length) return "";
+
+      bits = 0; maxpower = Math.pow(2, numBits); power = 1;
+      while (power !== maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+        bits |= (resb > 0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+
+      switch (c = bits) {
+        case 0:
+          bits = 0; maxpower = Math.pow(2, 8); power = 1;
+          while (power !== maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize - 1;
+          enlargeIn--;
+          break;
+        case 1:
+          bits = 0; maxpower = Math.pow(2, 16); power = 1;
+          while (power !== maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize - 1;
+          enlargeIn--;
+          break;
+        case 2:
+          return result.join("");
+      }
+
+      if (enlargeIn === 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+
+      if (dictionary[c]) entry = dictionary[c];
+      else {
+        if (c === dictSize) entry = w + w.charAt(0);
+        else return null;
+      }
+      result.push(entry);
+
+      dictionary[dictSize++] = w + entry.charAt(0);
+      enlargeIn--;
+      w = entry;
+
+      if (enlargeIn === 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+    }
+  }
+
+  return { compressToEncodedURIComponent, decompressFromEncodedURIComponent };
+})();
+
+/* ========= Utilidades ========= */
+
+const VIEWER_URL = "https://qrmedbr.github.io/viewer.html";
+
+function escHtml(s){
+  return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function cleanCSV(v){
+  return (v||"")
+    .split(",")
+    .map(x=>x.trim())
+    .filter(Boolean);
+}
+
+function parseRx(lines){
+  return (lines||"")
+    .split("\n")
+    .map(l=>l.trim())
+    .filter(Boolean)
+    .map(l=>{
+      const p = l.split("|").map(x=>x.trim());
+      const obj = { n: p[0]||"", d: p[1]||"", f: p[2]||"" };
+      if (p[3]) obj.r = p[3];
+      // remove chaves vazias
+      Object.keys(obj).forEach(k => { if (!obj[k]) delete obj[k]; });
+      return obj;
+    })
+    .filter(m => m.n || m.d || m.f || m.r);
+}
+
+// Formata para E.164 BR: +55 + DDD + número (8 ou 9 dígitos)
+function toE164BR(raw){
+  const digits = String(raw||"").replace(/\D/g,"");
+  if (!digits) return "";
+
+  // Já veio com 55 no início?
+  let d = digits;
+  if (d.startsWith("55") && d.length >= 12) d = d.slice(2);
+
+  // Esperado: DDD(2) + número(8 ou 9)
+  if (d.length === 10 || d.length === 11) {
+    const ddd = d.slice(0,2);
+    const num = d.slice(2);
+    // valida DDD básico: 11-99
+    const dddN = Number(ddd);
+    if (dddN >= 11 && dddN <= 99) return "+55" + ddd + num;
+  }
+
+  // Última tentativa: se usuário colou já em E.164
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
+    return "+" + digits;
+  }
+
+  return ""; // inválido
+}
+
+function isISODateYYYYMMDD(s){
+  return /^\d{4}-\d{2}-\d{2}$/.test(s||"");
+}
+
+function normalizeBloodType(bt){
+  const s = String(bt||"").trim().toUpperCase().replace(/\s+/g,"");
+  // aceita A+, A-, B+, B-, AB+, AB-, O+, O-
+  if (/^(A|B|AB|O)[+-]$/.test(s)) return s;
+  return "";
+}
+
+function numInRangeInt(raw, min, max){
+  if (raw == null || String(raw).trim()==="") return null;
+  const n = Number(String(raw).replace(",","."));
+  if (!Number.isFinite(n)) return null;
+  const i = Math.round(n);
+  if (i < min || i > max) return null;
+  return i;
+}
+
+function removeEmpty(obj){
+  Object.keys(obj).forEach(k=>{
+    const v = obj[k];
+    if (v == null) { delete obj[k]; return; }
+    if (typeof v === "string" && v.trim()==="") { delete obj[k]; return; }
+    if (Array.isArray(v) && v.length===0) { delete obj[k]; return; }
+    if (typeof v === "object" && !Array.isArray(v)) {
+      removeEmpty(v);
+      if (Object.keys(v).length===0) delete obj[k];
+    }
+  });
+  return obj;
+}
+
+function buildQRMEDBRv1(){
+  const pt = {
+    n: document.getElementById("pt_n").value.trim(),
+    dob: document.getElementById("pt_dob").value.trim(),
+    sex: document.getElementById("pt_sex").value.trim(),
+    addr: document.getElementById("pt_addr").value.trim(),
+    doc: document.getElementById("pt_doc").value.trim()
+  };
+
+  const med = {
+    bt: normalizeBloodType(document.getElementById("med_bt").value),
+    ht: numInRangeInt(document.getElementById("med_ht").value, 30, 260),
+    wt: numInRangeInt(document.getElementById("med_wt").value, 2, 500),
+    alg: cleanCSV(document.getElementById("med_alg").value),
+    cond: cleanCSV(document.getElementById("med_cond").value),
+    rx: parseRx(document.getElementById("med_rx").value),
+    note: document.getElementById("med_note").value.trim()
+  };
+
+  const ice = [];
+  const ice1 = {
+    n: document.getElementById("ice1_n").value.trim(),
+    p: document.getElementById("ice1_p").value.trim(),
+    t: toE164BR(document.getElementById("ice1_t").value)
+  };
+  const ice2 = {
+    n: document.getElementById("ice2_n").value.trim(),
+    p: document.getElementById("ice2_p").value.trim(),
+    t: toE164BR(document.getElementById("ice2_t").value)
+  };
+
+  // regras mínimas: ICE 1 precisa de nome e telefone válido
+  if (ice1.n || ice1.p || ice1.t) ice.push(ice1);
+  if (ice2.n || ice2.p || ice2.t) ice.push(ice2);
+
+  const data = {
+    v: 1,
+    pt,
+    med,
+    ice,
+    meta: {
+      gen: "QRMEDBR-Web",
+      lang: "pt-BR"
+      // ts opcional (poderia incluir): new Date().toISOString()
+    }
+  };
+
+  removeEmpty(data);
+  return data;
+}
+
+function validateQRMEDBR(data){
+  const errors = [];
+
+  if (!data || data.v !== 1) errors.push("Versão inválida (v deve ser 1).");
+
+  if (!data.pt?.n) errors.push("Nome do paciente é obrigatório.");
+  if (!data.pt?.dob) errors.push("Data de nascimento é obrigatória.");
+  if (data.pt?.dob && !isISODateYYYYMMDD(data.pt.dob)) errors.push("Nascimento deve estar em AAAA-MM-DD.");
+
+  if (!data.med?.bt) errors.push("Tipo sanguíneo é obrigatório e deve ser A+/A-/B+/B-/AB+/AB-/O+/O-.");
+
+  if (!Array.isArray(data.ice) || data.ice.length < 1) {
+    errors.push("Pelo menos 1 contato ICE é obrigatório.");
+  } else {
+    const first = data.ice[0];
+    if (!first?.t) errors.push("ICE 1: telefone inválido. Use DDD + número (ex: 21 99999-9999).");
+    if (!first?.n) errors.push("ICE 1: nome é obrigatório.");
+  }
+
+  // valida telefones adicionais
+  (data.ice||[]).forEach((c, idx)=>{
+    if (c.t && !/^\+55\d{10,11}$/.test(c.t)) errors.push(`ICE ${idx+1}: telefone deve estar em +55DDDNÚMERO.`);
+  });
+
+  return errors;
+}
+
+let lastURL = "";
+
+function gerarQR(){
+  const debug = document.getElementById("debug");
+  debug.innerHTML = "";
+
+  if (typeof window.QRCode === "undefined") {
+    debug.innerHTML = `<div class="err">Erro: <code>qrcode.min.js</code> não carregou.</div>`;
+    return;
+  }
+
+  const data = buildQRMEDBRv1();
+  const errors = validateQRMEDBR(data);
+  if (errors.length){
+    debug.innerHTML = `<div class="err">Corrija antes de gerar:</div><ul>${errors.map(e=>`<li>${escHtml(e)}</li>`).join("")}</ul>`;
+    return;
+  }
+
+  const json = JSON.stringify(data); // minificado
+  const payload = "lz:" + LZString.compressToEncodedURIComponent(json); // URL-safe
+  const url = `${VIEWER_URL}#${payload}`;
+  lastURL = url;
+
+  const box = document.getElementById("qrcode");
+  box.innerHTML = "";
+
+  new window.QRCode(box, {
+    text: url,
+    width: 320,
+    height: 320,
+    correctLevel: window.QRCode.CorrectLevel.M
+  });
+
+  debug.innerHTML =
+    `<div class="ok">QR gerado com sucesso ✅</div>` +
+    `Link no QR:<br><code>${escHtml(url)}</code><br><br>` +
+    `Tamanho do link: <b>${url.length}</b> caracteres<br>` +
+    `<span class="hint">Dica: quanto menor o link, mais fácil a câmera ler. A compressão (lz) ajuda muito.</span>`;
+}
+
+function baixarPNG(){
+  const box = document.getElementById("qrcode");
+  const img = box.querySelector("img");
+  const canvas = box.querySelector("canvas");
+
+  let dataURL = "";
+  if (canvas) dataURL = canvas.toDataURL("image/png");
+  else if (img && img.src) dataURL = img.src;
+
+  if (!dataURL){
+    document.getElementById("debug").innerHTML = `<div class="err">Nenhum QR para baixar. Gere primeiro.</div>`;
+    return;
+  }
+
+  const a = document.createElement("a");
+  a.href = dataURL;
+  a.download = "qrmedbr.png";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function copiarLink(){
+  if (!lastURL){
+    document.getElementById("debug").innerHTML = `<div class="err">Gere o QR primeiro para copiar o link.</div>`;
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(lastURL);
+    document.getElementById("debug").innerHTML = `<div class="ok">Link copiado ✅</div><code>${escHtml(lastURL)}</code>`;
+  } catch {
+    document.getElementById("debug").innerHTML =
+      `<div class="err">Não consegui copiar automaticamente.</div>` +
+      `Copie manualmente:<br><code>${escHtml(lastURL)}</code>`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("btnGerar").addEventListener("click", gerarQR);
+  document.getElementById("btnBaixar").addEventListener("click", baixarPNG);
+  document.getElementById("btnCopiar").addEventListener("click", copiarLink);
+});
+</script>
+
+</body>
+</html>
