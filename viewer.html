@@ -4,46 +4,129 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QRMEDBR — Viewer</title>
+
   <style>
-    body{font-family:Arial,sans-serif;margin:16px}
+    /* =========================
+       Tema (claro/escuro automático)
+       ========================= */
+    :root{
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: rgba(0,0,0,.72);
+      --card: #ffffff;
+      --border: #dddddd;
+      --subtle: #f6f6f6;
+      --danger: #b00020;
+      --accent: #111111;
+      --pill-bg: transparent;
+    }
+
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg: #0f1115;
+        --fg: #f1f3f5;
+        --muted: rgba(241,243,245,.72);
+        --card: #151924;
+        --border: #2a3142;
+        --subtle: #1b2233;
+        --danger: #ff6b81;
+        --accent: #f1f3f5;
+        --pill-bg: rgba(241,243,245,.06);
+      }
+    }
+
+    body{font-family:Arial,sans-serif;margin:16px;background:var(--bg);color:var(--fg)}
     .wrap{max-width:980px;margin:0 auto}
-    .card{border:1px solid #ddd;border-radius:14px;padding:14px;margin:12px 0}
+    .card{border:1px solid var(--border);border-radius:14px;padding:14px;margin:12px 0;background:var(--card)}
     h1{font-size:18px;margin:0 0 10px}
     h2{font-size:14px;margin:14px 0 6px}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .lbl{font-size:12px;opacity:.75}
     .val{font-size:14px;font-weight:800}
-    .emg{border:2px solid #111}
-    .pill{display:inline-block;border:1px solid #ddd;border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;font-size:12px}
+    .emg{border:2px solid var(--accent)}
+    .pill{
+      display:inline-block;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px 10px;
+      margin:4px 6px 0 0;
+      font-size:12px;
+      background: var(--pill-bg);
+    }
     ul{margin:6px 0 0 18px}
     table{width:100%;border-collapse:collapse;font-size:13px}
-    th,td{border:1px solid #ddd;padding:6px;vertical-align:top}
-    th{background:#f6f6f6;text-align:left}
-    .err{color:#b00020;font-weight:800}
-    code{word-break:break-word}
-    .actions{display:flex;gap:10px;flex-wrap:wrap}
-    button{padding:10px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
-    a.tel{font-weight:800;text-decoration:none}
-    .muted{font-size:12px;opacity:.75}
+    th,td{border:1px solid var(--border);padding:6px;vertical-align:top}
+    th{background:var(--subtle);text-align:left}
+    .err{color:var(--danger);font-weight:800}
+    code{word-break:break-word;background:var(--subtle);padding:2px 4px;border-radius:6px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:var(--card);
+      color:var(--fg);
+      cursor:pointer;
+    }
+    button:active{transform:scale(.99)}
+    a.tel{font-weight:800;text-decoration:none;color:var(--fg)}
+    .muted{font-size:12px;color:var(--muted)}
+    .tag{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px;background:var(--subtle)}
+    .split{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+
+    /* =========================
+       Modo Socorrista (ultra-enxuto)
+       - esconde detalhes e deixa só o essencial
+       ========================= */
+    body.ems .hide-ems { display:none !important; }
+    body.ems .wrap { max-width: 820px; }
+    body.ems h1 { font-size: 16px; }
+    body.ems .val { font-size: 15px; }
+    body.ems .pill { font-size: 13px; padding: 8px 12px; }
+    body.ems .card { padding: 12px; margin: 10px 0; }
+
+    /* Impressão */
     @media print{
-      button,.muted{display:none !important}
+      button,.muted,.tag{display:none !important}
       body{margin:0}
       .card{page-break-inside:avoid}
     }
   </style>
 </head>
+
 <body>
 <div class="wrap">
-  <div class="actions">
-    <button onclick="window.print()">Imprimir</button>
+
+  <!-- AÇÕES: só imprimir + alternar modo socorrista -->
+  <div class="split">
+    <div class="actions">
+      <button onclick="window.print()">Imprimir</button>
+      <button id="btnToggleEms" type="button">Modo socorrista: OFF</button>
+    </div>
+    <div class="tag" id="modeTag">Modo: Completo</div>
   </div>
-  <div class="muted">QRMEDBR Viewer: os dados são lidos do <code>#</code> da URL e processados localmente.</div>
+
+  <div class="muted">
+    QRMEDBR Viewer: os dados são lidos do <code>#</code> da URL e processados localmente no navegador.
+  </div>
 
   <div id="out"></div>
+
+  <!-- Aviso legal / consentimento (sempre visível, mas curto; no modo socorrista continua) -->
+  <div class="card">
+    <h1>Aviso legal e consentimento</h1>
+    <div class="muted">
+      Este QR Code foi criado voluntariamente pelo titular para <b>facilitar atendimento em emergência</b>.
+      As informações podem estar desatualizadas e <b>não substituem avaliação médica</b>.
+      Ao acessar este QR, você concorda em usar os dados <b>somente para cuidado/triagem</b> e evitar compartilhamento indevido.
+      (Boas práticas de privacidade/LGPD: minimização, finalidade, necessidade e segurança.)
+    </div>
+  </div>
+
 </div>
 
 <script>
-/* ====== LZ-String (mesmas funções do gerador) ====== */
+/* ====== LZ-String (decompressFromEncodedURIComponent) ====== */
 const LZString = (function() {
   const f = String.fromCharCode;
   const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
@@ -179,12 +262,34 @@ function esc(s){
     .replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
+/* ====== Modo socorrista: via ?mode=ems ou botão ====== */
+function setEmsMode(on){
+  document.body.classList.toggle("ems", !!on);
+  document.getElementById("btnToggleEms").textContent = `Modo socorrista: ${on ? "ON" : "OFF"}`;
+  document.getElementById("modeTag").textContent = `Modo: ${on ? "Socorrista" : "Completo"}`;
+
+  // Persistência local (opcional): se quiser que sempre abra em EMS após escolher
+  try { localStorage.setItem("qrmedbr_mode", on ? "ems" : "full"); } catch {}
+}
+
+function getInitialMode(){
+  const params = new URLSearchParams(location.search);
+  const q = (params.get("mode") || "").toLowerCase();
+  if (q === "ems") return true;
+
+  // fallback: preferência salva localmente
+  try { return localStorage.getItem("qrmedbr_mode") === "ems"; } catch { return false; }
+}
+
+/* ====== Render (sem botão copiar + sem bloco Dados brutos) ====== */
 function render(data){
   const out = document.getElementById("out");
 
   const pt = data.pt || {};
   const med = data.med || {};
   const ice = Array.isArray(data.ice) ? data.ice : [];
+
+  const sexPretty = (pt.sex === "NA") ? "N/A" : (pt.sex || "—");
 
   const pills = [];
   if (med.bt) pills.push(`<span class="pill"><b>Tipo sanguíneo:</b> ${esc(med.bt)}</span>`);
@@ -197,53 +302,97 @@ function render(data){
     ? `<ul>${ice.map((c,i)=>`
         <li>
           <b>${esc(c.n || ("ICE " + (i+1)))}</b>${c.p ? ` — ${esc(c.p)}` : ""}<br/>
-          ${c.t ? `<a class="tel" href="tel:${esc(c.t)}">${esc(c.t)}</a>` : `<span class="err">Telefone ausente</span>`}
+          ${c.t ? `<a class="tel" href="tel:${esc(c.t)}">${esc(c.t)}</a>` : `<span class="muted">Telefone não informado</span>`}
         </li>`).join("")}</ul>`
-    : `<p><em>Não informado</em></p>`;
+    : `<p class="muted"><em>Nenhum contato informado</em></p>`;
 
-  const algHtml = (med.alg && med.alg.length) ? `<ul>${med.alg.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : `<p><em>Não informado</em></p>`;
-  const condHtml = (med.cond && med.cond.length) ? `<ul>${med.cond.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : `<p><em>Não informado</em></p>`;
+  const algHtml = (med.alg && med.alg.length)
+    ? `<ul>${med.alg.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`
+    : `<p class="muted"><em>Não informado</em></p>`;
+
+  const condHtml = (med.cond && med.cond.length)
+    ? `<ul>${med.cond.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`
+    : `<p class="muted"><em>Não informado</em></p>`;
 
   const rxHtml = (Array.isArray(med.rx) && med.rx.length)
-    ? `<table><thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th><th>Via</th></tr></thead><tbody>
-        ${med.rx.map(m=>`
-          <tr>
-            <td>${esc(m.n||"")}</td>
-            <td>${esc(m.d||"")}</td>
-            <td>${esc(m.f||"")}</td>
-            <td>${esc(m.r||"")}</td>
-          </tr>`).join("")}
-      </tbody></table>`
-    : `<p><em>Não informado</em></p>`;
+    ? `<table class="hide-ems">
+        <thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th><th>Via</th></tr></thead>
+        <tbody>
+          ${med.rx.map(m=>`
+            <tr>
+              <td>${esc(m.n||"")}</td>
+              <td>${esc(m.d||"")}</td>
+              <td>${esc(m.f||"")}</td>
+              <td>${esc(m.r||"")}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="muted ems-only" style="display:none"></div>`
+    : `<p class="muted"><em>Não informado</em></p>`;
+
+  // Em modo socorrista: mostramos lista simples dos meds (sem tabela) para leitura rápida
+  const rxEmsList = (Array.isArray(med.rx) && med.rx.length)
+    ? `<ul>${med.rx.map(m=>{
+        const parts = [
+          m.n ? `<b>${esc(m.n)}</b>` : "",
+          m.d ? `${esc(m.d)}` : "",
+          m.f ? `${esc(m.f)}` : "",
+          m.r ? `${esc(m.r)}` : ""
+        ].filter(Boolean).join(" — ");
+        return `<li>${parts || "—"}</li>`;
+      }).join("")}</ul>`
+    : `<p class="muted"><em>Não informado</em></p>`;
 
   out.innerHTML = `
     <div class="card emg">
-      <h1>Resumo de Emergência</h1>
+      <h1>Resumo de Emergência — QRMEDBR</h1>
       <div class="grid">
         <div><div class="lbl">Nome</div><div class="val">${esc(pt.n) || "—"}</div></div>
         <div><div class="lbl">Nascimento</div><div class="val">${esc(pt.dob) || "—"}</div></div>
-        <div><div class="lbl">Sexo</div><div class="val">${esc(pt.sex) || "—"}</div></div>
-        <div><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
+        <div><div class="lbl">Sexo</div><div class="val">${esc(sexPretty)}</div></div>
+        <div class="hide-ems"><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
       </div>
-      <div style="margin-top:10px">${pills.join("") || "<em>Sem dados adicionais</em>"}</div>
-      ${med.note ? `<div style="margin-top:10px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
+
+      <div style="margin-top:10px">${pills.join("") || "<span class='muted'><em>Sem dados adicionais</em></span>"}</div>
+
+      ${
+        med.note
+          ? `<div style="margin-top:10px"><b>Obs:</b> ${esc(med.note)}</div>`
+          : ""
+      }
     </div>
 
     <div class="card">
+      <h1>Contatos de Emergência (ICE)</h1>
+      ${iceHtml}
+    </div>
+
+    <div class="card hide-ems">
       <h1>Detalhes Médicos</h1>
       <h2>Alergias</h2>${algHtml}
       <h2>Condições prévias</h2>${condHtml}
       <h2>Medicamentos em uso</h2>${rxHtml}
     </div>
 
-    <div class="card">
-      <h1>Dados brutos (JSON)</h1>
-      <code id="raw">${esc(JSON.stringify(data))}</code>
+    <div class="card ${"hide-ems"}" id="emsMedsBlock" style="display:none">
+      <h1>Medicamentos (modo socorrista)</h1>
+      ${rxEmsList}
+    </div>
+
+    <div class="card ${"hide-ems"}" id="emsExtraBlock" style="display:none">
+      <h1>Outros</h1>
+      <h2>Alergias</h2>${algHtml}
+      <h2>Condições</h2>${condHtml}
     </div>
   `;
 
+  // Liga/desliga blocos específicos do modo socorrista
+  const isEms = document.body.classList.contains("ems");
+  document.getElementById("emsMedsBlock").style.display = isEms ? "block" : "none";
+  document.getElementById("emsExtraBlock").style.display = isEms ? "block" : "none";
 }
 
+/* ====== Decode payload ====== */
 function decodePayload(hash){
   const h = (hash||"").replace(/^#/, "").trim();
   if (!h) throw new Error("Hash vazio (nenhum dado no QR).");
@@ -256,13 +405,26 @@ function decodePayload(hash){
     return JSON.parse(json);
   }
 
-  // fallback: tenta JSON direto (se alguém gerar sem compressão)
+  // fallback: tenta JSON direto
   if (h.startsWith("{")) return JSON.parse(h);
 
   throw new Error("Formato de payload desconhecido.");
 }
 
+/* ====== Init ====== */
 (function init(){
+  const initialEms = getInitialMode();
+  setEmsMode(initialEms);
+
+  document.getElementById("btnToggleEms").addEventListener("click", ()=>{
+    setEmsMode(!document.body.classList.contains("ems"));
+    // re-render para ajustar blocos e layout
+    try{
+      const data = decodePayload(location.hash);
+      render(data);
+    } catch {}
+  });
+
   const out = document.getElementById("out");
   try{
     const data = decodePayload(location.hash);
@@ -274,4 +436,3 @@ function decodePayload(hash){
 </script>
 </body>
 </html>
-
