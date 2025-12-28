@@ -3,90 +3,290 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EQR – Visualização</title>
+  <title>QRMEDBR — Viewer</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 16px; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; max-width: 820px; }
-    h1 { font-size: 18px; margin: 0 0 10px; }
-    h2 { font-size: 14px; margin: 14px 0 6px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .lbl { font-size: 12px; opacity: .75; }
-    .val { font-size: 14px; font-weight: 700; }
-    ul { margin: 6px 0 0 18px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
-    th { background: #f6f6f6; text-align: left; }
-    .err { color: #b00020; font-weight: 700; }
-    code { word-break: break-word; }
+    body{font-family:Arial,sans-serif;margin:16px}
+    .wrap{max-width:980px;margin:0 auto}
+    .card{border:1px solid #ddd;border-radius:14px;padding:14px;margin:12px 0}
+    h1{font-size:18px;margin:0 0 10px}
+    h2{font-size:14px;margin:14px 0 6px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .lbl{font-size:12px;opacity:.75}
+    .val{font-size:14px;font-weight:800}
+    .emg{border:2px solid #111}
+    .pill{display:inline-block;border:1px solid #ddd;border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;font-size:12px}
+    ul{margin:6px 0 0 18px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border:1px solid #ddd;padding:6px;vertical-align:top}
+    th{background:#f6f6f6;text-align:left}
+    .err{color:#b00020;font-weight:800}
+    code{word-break:break-word}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    button{padding:10px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
+    a.tel{font-weight:800;text-decoration:none}
+    .muted{font-size:12px;opacity:.75}
+    @media print{
+      button,.muted{display:none !important}
+      body{margin:0}
+      .card{page-break-inside:avoid}
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Dados Médicos (EQR)</h1>
-    <div id="content">Carregando…</div>
+<div class="wrap">
+  <div class="actions">
+    <button onclick="window.print()">Imprimir</button>
+    <button id="btnCopiar">Copiar dados (JSON)</button>
   </div>
+  <div class="muted">QRMEDBR Viewer: os dados são lidos do <code>#</code> da URL e processados localmente.</div>
+
+  <div id="out"></div>
+</div>
 
 <script>
-  function b64urlDecodeToString(b64url) {
-    const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64url.length + 3) % 4);
-    const bin = atob(b64);
-    // UTF-8 safe decode
-    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
-    return new TextDecoder("utf-8").decode(bytes);
+/* ====== LZ-String (mesmas funções do gerador) ====== */
+const LZString = (function() {
+  const f = String.fromCharCode;
+  const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+  const getBaseValue = (alphabet, character) => alphabet.indexOf(character);
+
+  function decompressFromEncodedURIComponent(input) {
+    if (input == null) return "";
+    if (input === "") return null;
+    return _decompress(input.length, 32, index => getBaseValue(keyStrUriSafe, input.charAt(index)));
   }
 
-  function esc(s) {
-    return String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  function _decompress(length, resetValue, getNextValue) {
+    const dictionary = [];
+    let next;
+    let enlargeIn = 4;
+    let dictSize = 4;
+    let numBits = 3;
+    let entry = "";
+    const result = [];
+    let i;
+    let w;
+    let bits, resb, maxpower, power;
+    let c;
+    const data = { val: getNextValue(0), position: resetValue, index: 1 };
+
+    for (i = 0; i < 3; i++) dictionary[i] = i;
+
+    bits = 0; maxpower = Math.pow(2, 2); power = 1;
+    while (power !== maxpower) {
+      resb = data.val & data.position;
+      data.position >>= 1;
+      if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+      bits |= (resb > 0 ? 1 : 0) * power;
+      power <<= 1;
+    }
+
+    switch (next = bits) {
+      case 0:
+        bits = 0; maxpower = Math.pow(2, 8); power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        c = f(bits);
+        break;
+      case 1:
+        bits = 0; maxpower = Math.pow(2, 16); power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        c = f(bits);
+        break;
+      case 2:
+        return "";
+    }
+    dictionary[3] = c;
+    w = c;
+    result.push(c);
+
+    while (true) {
+      if (data.index > length) return "";
+
+      bits = 0; maxpower = Math.pow(2, numBits); power = 1;
+      while (power !== maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+        bits |= (resb > 0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+
+      switch (c = bits) {
+        case 0:
+          bits = 0; maxpower = Math.pow(2, 8); power = 1;
+          while (power !== maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize - 1;
+          enlargeIn--;
+          break;
+        case 1:
+          bits = 0; maxpower = Math.pow(2, 16); power = 1;
+          while (power !== maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize - 1;
+          enlargeIn--;
+          break;
+        case 2:
+          return result.join("");
+      }
+
+      if (enlargeIn === 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+
+      if (dictionary[c]) entry = dictionary[c];
+      else {
+        if (c === dictSize) entry = w + w.charAt(0);
+        else return null;
+      }
+      result.push(entry);
+
+      dictionary[dictSize++] = w + entry.charAt(0);
+      enlargeIn--;
+      w = entry;
+
+      if (enlargeIn === 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+    }
   }
 
-  function render(d) {
-    const content = document.getElementById("content");
-    const alergias = (d.a && d.a.length) ? `<ul>${d.a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<em>Não informado</em>`;
-    const cond = (d.c && d.c.length) ? `<ul>${d.c.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<em>Não informado</em>`;
-    const meds = (d.m && d.m.length)
-      ? `<table><thead><tr><th>Medicamento</th><th>Dosagem</th><th>Frequência</th></tr></thead><tbody>
-          ${d.m.map(m => `<tr><td>${esc(m.n)}</td><td>${esc(m.d)}</td><td>${esc(m.f)}</td></tr>`).join("")}
-         </tbody></table>`
-      : `<em>Não informado</em>`;
+  return { decompressFromEncodedURIComponent };
+})();
 
-    content.innerHTML = `
+function esc(s){
+  return String(s??"")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function render(data){
+  const out = document.getElementById("out");
+
+  const pt = data.pt || {};
+  const med = data.med || {};
+  const ice = Array.isArray(data.ice) ? data.ice : [];
+
+  const pills = [];
+  if (med.bt) pills.push(`<span class="pill"><b>Tipo sanguíneo:</b> ${esc(med.bt)}</span>`);
+  if (Array.isArray(med.alg) && med.alg.length) pills.push(`<span class="pill"><b>Alergias:</b> ${esc(med.alg.join(", "))}</span>`);
+  if (Array.isArray(med.cond) && med.cond.length) pills.push(`<span class="pill"><b>Condições:</b> ${esc(med.cond.join(", "))}</span>`);
+  if (med.ht) pills.push(`<span class="pill"><b>Altura:</b> ${esc(med.ht)} cm</span>`);
+  if (med.wt) pills.push(`<span class="pill"><b>Peso:</b> ${esc(med.wt)} kg</span>`);
+
+  const iceHtml = ice.length
+    ? `<ul>${ice.map((c,i)=>`
+        <li>
+          <b>${esc(c.n || ("ICE " + (i+1)))}</b>${c.p ? ` — ${esc(c.p)}` : ""}<br/>
+          ${c.t ? `<a class="tel" href="tel:${esc(c.t)}">${esc(c.t)}</a>` : `<span class="err">Telefone ausente</span>`}
+        </li>`).join("")}</ul>`
+    : `<p><em>Não informado</em></p>`;
+
+  const algHtml = (med.alg && med.alg.length) ? `<ul>${med.alg.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : `<p><em>Não informado</em></p>`;
+  const condHtml = (med.cond && med.cond.length) ? `<ul>${med.cond.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : `<p><em>Não informado</em></p>`;
+
+  const rxHtml = (Array.isArray(med.rx) && med.rx.length)
+    ? `<table><thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th><th>Via</th></tr></thead><tbody>
+        ${med.rx.map(m=>`
+          <tr>
+            <td>${esc(m.n||"")}</td>
+            <td>${esc(m.d||"")}</td>
+            <td>${esc(m.f||"")}</td>
+            <td>${esc(m.r||"")}</td>
+          </tr>`).join("")}
+      </tbody></table>`
+    : `<p><em>Não informado</em></p>`;
+
+  out.innerHTML = `
+    <div class="card emg">
+      <h1>Resumo de Emergência — QRMEDBR</h1>
       <div class="grid">
-        <div><div class="lbl">Nome</div><div class="val">${esc(d.n) || "—"}</div></div>
-        <div><div class="lbl">Nascimento</div><div class="val">${esc(d.d) || "—"}</div></div>
-        <div><div class="lbl">Tipo sanguíneo</div><div class="val">${esc(d.ts) || "—"}</div></div>
+        <div><div class="lbl">Nome</div><div class="val">${esc(pt.n) || "—"}</div></div>
+        <div><div class="lbl">Nascimento</div><div class="val">${esc(pt.dob) || "—"}</div></div>
+        <div><div class="lbl">Sexo</div><div class="val">${esc(pt.sex) || "—"}</div></div>
+        <div><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
       </div>
+      <div style="margin-top:10px">${pills.join("") || "<em>Sem dados adicionais</em>"}</div>
+      ${med.note ? `<div style="margin-top:10px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
+    </div>
 
-      <h2>Alergias</h2>${alergias}
-      <h2>Condições prévias</h2>${cond}
-      <h2>Medicamentos em uso</h2>${meds}
+    <div class="card">
+      <h1>Contatos de Emergência (ICE)</h1>
+      ${iceHtml}
+    </div>
 
-      <h2>Dados brutos</h2>
-      <code>${esc(JSON.stringify(d))}</code>
-    `;
+    <div class="card">
+      <h1>Detalhes Médicos</h1>
+      <h2>Alergias</h2>${algHtml}
+      <h2>Condições prévias</h2>${condHtml}
+      <h2>Medicamentos em uso</h2>${rxHtml}
+    </div>
+
+    <div class="card">
+      <h1>Dados brutos (JSON)</h1>
+      <code id="raw">${esc(JSON.stringify(data))}</code>
+    </div>
+  `;
+
+  // copiar JSON
+  document.getElementById("btnCopiar").onclick = async () => {
+    const txt = JSON.stringify(data);
+    try {
+      await navigator.clipboard.writeText(txt);
+      alert("JSON copiado ✅");
+    } catch {
+      alert("Não consegui copiar automaticamente. Selecione e copie manualmente no bloco de dados.");
+    }
+  };
+}
+
+function decodePayload(hash){
+  const h = (hash||"").replace(/^#/, "").trim();
+  if (!h) throw new Error("Hash vazio (nenhum dado no QR).");
+
+  // Padrão: lz:<payload>
+  if (h.startsWith("lz:")) {
+    const payload = h.slice(3);
+    const json = LZString.decompressFromEncodedURIComponent(payload);
+    if (!json) throw new Error("Falha ao descomprimir payload (lz).");
+    return JSON.parse(json);
   }
 
-  (function init() {
-    const hash = (location.hash || "").slice(1).trim();
-    const content = document.getElementById("content");
+  // fallback: tenta JSON direto (se alguém gerar sem compressão)
+  if (h.startsWith("{")) return JSON.parse(h);
 
-    if (!hash) {
-      content.innerHTML = `<div class="err">Nenhum dado encontrado no QR (hash vazio).</div>`;
-      return;
-    }
+  throw new Error("Formato de payload desconhecido.");
+}
 
-    try {
-      const json = b64urlDecodeToString(hash);
-      const data = JSON.parse(json);
-      render(data);
-    } catch (e) {
-      content.innerHTML = `<div class="err">Falha ao decodificar os dados.</div><code>${esc(String(e))}</code>`;
-    }
-  })();
+(function init(){
+  const out = document.getElementById("out");
+  try{
+    const data = decodePayload(location.hash);
+    render(data);
+  } catch(e){
+    out.innerHTML = `<div class="card"><div class="err">Erro ao carregar dados do QR:</div><code>${esc(String(e))}</code></div>`;
+  }
+})();
 </script>
 </body>
 </html>
