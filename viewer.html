@@ -41,15 +41,6 @@
     .lbl{font-size:12px;opacity:.75}
     .val{font-size:14px;font-weight:800}
     .emg{border:2px solid var(--accent)}
-    .pill{
-      display:inline-block;
-      border:1px solid var(--border);
-      border-radius:999px;
-      padding:6px 10px;
-      margin:4px 6px 0 0;
-      font-size:12px;
-      background: var(--pill-bg);
-    }
     ul{margin:6px 0 0 18px}
     table{width:100%;border-collapse:collapse;font-size:13px}
     th,td{border:1px solid var(--border);padding:6px;vertical-align:top}
@@ -69,10 +60,50 @@
     a.tel{font-weight:800;text-decoration:none;color:var(--fg)}
     .muted{font-size:12px;color:var(--muted)}
 
+    /* =========================
+       NOVO: faixa de destaque (BT / Altura / Peso)
+       ========================= */
+    .vitals{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+      margin-top:12px;
+    }
+    .vital{
+      border:2px solid var(--accent);
+      border-radius:14px;
+      padding:12px;
+      background: linear-gradient(180deg, var(--subtle), transparent);
+    }
+    .vital .k{
+      font-size:12px;
+      opacity:.8;
+      margin-bottom:6px;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      font-weight:700;
+    }
+    .vital .v{
+      font-size:26px;
+      font-weight:900;
+      line-height:1.1;
+    }
+    .vital .u{
+      font-size:12px;
+      opacity:.85;
+      margin-top:4px;
+      font-weight:700;
+    }
+    @media (max-width:640px){
+      .vitals{grid-template-columns:1fr}
+      .vital .v{font-size:28px}
+    }
+
     @media print{
       button,.muted{display:none !important}
       body{margin:0}
       .card{page-break-inside:avoid}
+      .vital{break-inside:avoid}
     }
   </style>
 </head>
@@ -247,11 +278,26 @@ function render(data){
 
   const sexPretty = (pt.sex === "NA") ? "N/A" : (pt.sex || "—");
 
-  // ✅ PRIMEIRO QUADRO: somente bt/altura/peso (sem alergias e condições)
-  const pills = [];
-  if (med.bt) pills.push(`<span class="pill"><b>Tipo sanguíneo:</b> ${esc(med.bt)}</span>`);
-  if (med.ht) pills.push(`<span class="pill"><b>Altura:</b> ${esc(med.ht)} cm</span>`);
-  if (med.wt) pills.push(`<span class="pill"><b>Peso:</b> ${esc(med.wt)} kg</span>`);
+  // ✅ Destaque forte: BT / Altura / Peso
+  const vitals = `
+    <div class="vitals">
+      <div class="vital">
+        <div class="k">Tipo sanguíneo</div>
+        <div class="v">${esc(med.bt || "—")}</div>
+        <div class="u">ABO/Rh</div>
+      </div>
+      <div class="vital">
+        <div class="k">Altura</div>
+        <div class="v">${esc(med.ht ?? "—")}</div>
+        <div class="u">cm</div>
+      </div>
+      <div class="vital">
+        <div class="k">Peso</div>
+        <div class="v">${esc(med.wt ?? "—")}</div>
+        <div class="u">kg</div>
+      </div>
+    </div>
+  `;
 
   const iceHtml = ice.length
     ? `<ul>${ice.map((c,i)=>`
@@ -294,9 +340,9 @@ function render(data){
         <div><div class="lbl">Endereço</div><div class="val">${esc(pt.addr) || "—"}</div></div>
       </div>
 
-      <div style="margin-top:10px">${pills.join("") || "<span class='muted'><em>Sem dados adicionais</em></span>"}</div>
+      ${vitals}
 
-      ${med.note ? `<div style="margin-top:10px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
+      ${med.note ? `<div style="margin-top:12px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
     </div>
 
     <div class="card">
