@@ -38,10 +38,11 @@
       <label>Nome completo *</label>
       <input id="pt_n" placeholder="Ex: Felipe Vieira de Almeida" />
     </div>
+
     <div class="row2">
       <div>
-        <label>Nascimento (AAAA-MM-DD) *</label>
-        <input id="pt_dob" placeholder="1998-04-12" />
+        <label>Nascimento (DD-MM-AAAA) *</label>
+        <input id="pt_dob" placeholder="12-04-1998" />
       </div>
       <div>
         <label>Sexo (opcional)</label>
@@ -49,15 +50,16 @@
           <option value="">—</option>
           <option value="M">M</option>
           <option value="F">F</option>
-          <option value="X">X</option>
-          <option value="U">U</option>
+          <option value="NA">N/A</option>
         </select>
       </div>
     </div>
+
     <div>
       <label>Endereço (curto, opcional)</label>
       <input id="pt_addr" placeholder="Ex: Rio de Janeiro - RJ" />
     </div>
+
     <div>
       <label>Documento (opcional — ex: CPF mascarado)</label>
       <input id="pt_doc" placeholder="***.***.***-**" />
@@ -69,13 +71,25 @@
   <h2 style="margin:0 0 6px">Dados médicos</h2>
   <div class="row">
     <div>
-      <label>Tipo sanguíneo *</label>
-      <input id="med_bt" placeholder="Ex: O+" />
+      <label>Tipo sanguíneo (opcional)</label>
+      <select id="med_bt">
+        <option value="">—</option>
+        <option value="O+">O+</option>
+        <option value="O-">O-</option>
+        <option value="A+">A+</option>
+        <option value="A-">A-</option>
+        <option value="B+">B+</option>
+        <option value="B-">B-</option>
+        <option value="AB+">AB+</option>
+        <option value="AB-">AB-</option>
+      </select>
     </div>
+
     <div>
       <label>Altura (cm, opcional)</label>
       <input id="med_ht" placeholder="Ex: 178" inputmode="numeric" />
     </div>
+
     <div>
       <label>Peso (kg, opcional)</label>
       <input id="med_wt" placeholder="Ex: 75" inputmode="numeric" />
@@ -104,11 +118,11 @@ Metformina | 850mg | 2x/dia | VO"></textarea>
 </div>
 
 <div class="card">
-  <h2 style="margin:0 0 6px">Contatos de emergência (ICE)</h2>
+  <h2 style="margin:0 0 6px">Contatos de emergência (ICE) — tudo opcional</h2>
 
   <div class="grid">
     <div>
-      <label>ICE 1 — Nome *</label>
+      <label>ICE 1 — Nome (opcional)</label>
       <input id="ice1_n" placeholder="Ex: Maria Almeida" />
     </div>
     <div class="row2">
@@ -117,7 +131,7 @@ Metformina | 850mg | 2x/dia | VO"></textarea>
         <input id="ice1_p" placeholder="Ex: Mãe" />
       </div>
       <div>
-        <label>ICE 1 — Telefone * (aceita BR com DDD)</label>
+        <label>ICE 1 — Telefone (aceita BR com DDD)</label>
         <input id="ice1_t" placeholder="Ex: (21) 99999-9999" inputmode="tel" />
       </div>
     </div>
@@ -137,6 +151,10 @@ Metformina | 850mg | 2x/dia | VO"></textarea>
       </div>
     </div>
   </div>
+
+  <div class="hint">
+    Dica: telefones são convertidos para o formato <code>+55DDDNÚMERO</code> automaticamente (quando possível).
+  </div>
 </div>
 
 <div class="card">
@@ -155,9 +173,12 @@ Metformina | 850mg | 2x/dia | VO"></textarea>
 <script>
 /**
  * QRMEDBR — Gerador v1
- * - JSON padrão: { v, pt, med, ice, meta }
- * - Dados no hash: viewer.html#<payload>
- * - payload comprimido por LZ (URL-safe)
+ * Mudanças solicitadas:
+ * - Nascimento: DD-MM-AAAA
+ * - Sexo: M / F / N/A
+ * - Tipo sanguíneo: lista, opcional
+ * - ICE: nada obrigatório
+ * - Continua: link HTTPS com payload no hash e compressão LZ
  */
 
 /* ========= LZ-String (somente funções usadas) =========
@@ -481,10 +502,11 @@ const LZString = (function() {
   return { compressToEncodedURIComponent, decompressFromEncodedURIComponent };
 })();
 
-/* ========= Utilidades ========= */
-
+/* ========= Config ========= */
+// Monta automaticamente a URL do viewer relativo ao local atual (evita erro de caminho)
 const VIEWER_URL = new URL("viewer.html", window.location.href).toString().split("#")[0];
 
+/* ========= Utilidades ========= */
 function escHtml(s){
   return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
@@ -505,7 +527,6 @@ function parseRx(lines){
       const p = l.split("|").map(x=>x.trim());
       const obj = { n: p[0]||"", d: p[1]||"", f: p[2]||"" };
       if (p[3]) obj.r = p[3];
-      // remove chaves vazias
       Object.keys(obj).forEach(k => { if (!obj[k]) delete obj[k]; });
       return obj;
     })
@@ -517,20 +538,16 @@ function toE164BR(raw){
   const digits = String(raw||"").replace(/\D/g,"");
   if (!digits) return "";
 
-  // Já veio com 55 no início?
   let d = digits;
   if (d.startsWith("55") && d.length >= 12) d = d.slice(2);
 
-  // Esperado: DDD(2) + número(8 ou 9)
   if (d.length === 10 || d.length === 11) {
     const ddd = d.slice(0,2);
     const num = d.slice(2);
-    // valida DDD básico: 11-99
     const dddN = Number(ddd);
     if (dddN >= 11 && dddN <= 99) return "+55" + ddd + num;
   }
 
-  // Última tentativa: se usuário colou já em E.164
   if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
     return "+" + digits;
   }
@@ -538,15 +555,8 @@ function toE164BR(raw){
   return ""; // inválido
 }
 
-function isISODateYYYYMMDD(s){
-  return /^\d{4}-\d{2}-\d{2}$/.test(s||"");
-}
-
-function normalizeBloodType(bt){
-  const s = String(bt||"").trim().toUpperCase().replace(/\s+/g,"");
-  // aceita A+, A-, B+, B-, AB+, AB-, O+, O-
-  if (/^(A|B|AB|O)[+-]$/.test(s)) return s;
-  return "";
+function isDateDDMMYYYY(s){
+  return /^\d{2}-\d{2}-\d{4}$/.test(s||"");
 }
 
 function numInRangeInt(raw, min, max){
@@ -575,14 +585,14 @@ function removeEmpty(obj){
 function buildQRMEDBRv1(){
   const pt = {
     n: document.getElementById("pt_n").value.trim(),
-    dob: document.getElementById("pt_dob").value.trim(),
-    sex: document.getElementById("pt_sex").value.trim(),
+    dob: document.getElementById("pt_dob").value.trim(), // DD-MM-AAAA
+    sex: document.getElementById("pt_sex").value.trim(), // M/F/NA
     addr: document.getElementById("pt_addr").value.trim(),
     doc: document.getElementById("pt_doc").value.trim()
   };
 
   const med = {
-    bt: normalizeBloodType(document.getElementById("med_bt").value),
+    bt: (document.getElementById("med_bt").value || "").trim().toUpperCase(), // opcional
     ht: numInRangeInt(document.getElementById("med_ht").value, 30, 260),
     wt: numInRangeInt(document.getElementById("med_wt").value, 2, 500),
     alg: cleanCSV(document.getElementById("med_alg").value),
@@ -591,6 +601,7 @@ function buildQRMEDBRv1(){
     note: document.getElementById("med_note").value.trim()
   };
 
+  // ICE totalmente opcional
   const ice = [];
   const ice1 = {
     n: document.getElementById("ice1_n").value.trim(),
@@ -603,7 +614,7 @@ function buildQRMEDBRv1(){
     t: toE164BR(document.getElementById("ice2_t").value)
   };
 
-  // regras mínimas: ICE 1 precisa de nome e telefone válido
+  // Só adiciona contato se tiver algo preenchido
   if (ice1.n || ice1.p || ice1.t) ice.push(ice1);
   if (ice2.n || ice2.p || ice2.t) ice.push(ice2);
 
@@ -615,7 +626,6 @@ function buildQRMEDBRv1(){
     meta: {
       gen: "QRMEDBR-Web",
       lang: "pt-BR"
-      // ts opcional (poderia incluir): new Date().toISOString()
     }
   };
 
@@ -628,24 +638,24 @@ function validateQRMEDBR(data){
 
   if (!data || data.v !== 1) errors.push("Versão inválida (v deve ser 1).");
 
+  // Mantive nome e nascimento como obrigatórios (você não pediu para remover)
   if (!data.pt?.n) errors.push("Nome do paciente é obrigatório.");
   if (!data.pt?.dob) errors.push("Data de nascimento é obrigatória.");
-  if (data.pt?.dob && !isISODateYYYYMMDD(data.pt.dob)) errors.push("Nascimento deve estar em AAAA-MM-DD.");
+  if (data.pt?.dob && !isDateDDMMYYYY(data.pt.dob)) errors.push("Nascimento deve estar em DD-MM-AAAA.");
 
-  if (!data.med?.bt) errors.push("Tipo sanguíneo é obrigatório e deve ser A+/A-/B+/B-/AB+/AB-/O+/O-.");
+  // Tipo sanguíneo NÃO é obrigatório (sem validação obrigatória)
 
-  if (!Array.isArray(data.ice) || data.ice.length < 1) {
-    errors.push("Pelo menos 1 contato ICE é obrigatório.");
-  } else {
-    const first = data.ice[0];
-    if (!first?.t) errors.push("ICE 1: telefone inválido. Use DDD + número (ex: 21 99999-9999).");
-    if (!first?.n) errors.push("ICE 1: nome é obrigatório.");
-  }
-
-  // valida telefones adicionais
-  (data.ice||[]).forEach((c, idx)=>{
-    if (c.t && !/^\+55\d{10,11}$/.test(c.t)) errors.push(`ICE ${idx+1}: telefone deve estar em +55DDDNÚMERO.`);
+  // ICE: nada obrigatório. Se houver telefone, checa formato.
+  (data.ice || []).forEach((c, idx) => {
+    if (c.t && !/^\+55\d{10,11}$/.test(c.t)) {
+      errors.push(`ICE ${idx+1}: telefone deve estar em +55DDDNÚMERO.`);
+    }
   });
+
+  // Sexo: se preenchido, deve ser M/F/NA
+  if (data.pt?.sex && !["M","F","NA"].includes(data.pt.sex)) {
+    errors.push("Sexo deve ser M, F ou N/A.");
+  }
 
   return errors;
 }
@@ -736,5 +746,3 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
 </body>
 </html>
-
-
