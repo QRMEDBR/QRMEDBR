@@ -36,7 +36,6 @@
 <div class="wrap">
   <div class="actions">
     <button onclick="window.print()">Imprimir</button>
-    <button id="btnCopiar">Copiar dados (JSON)</button>
   </div>
   <div class="muted">QRMEDBR Viewer: os dados são lidos do <code>#</code> da URL e processados localmente.</div>
 
@@ -219,7 +218,7 @@ function render(data){
 
   out.innerHTML = `
     <div class="card emg">
-      <h1>Resumo de Emergência — QRMEDBR</h1>
+      <h1>Resumo de Emergência</h1>
       <div class="grid">
         <div><div class="lbl">Nome</div><div class="val">${esc(pt.n) || "—"}</div></div>
         <div><div class="lbl">Nascimento</div><div class="val">${esc(pt.dob) || "—"}</div></div>
@@ -228,11 +227,6 @@ function render(data){
       </div>
       <div style="margin-top:10px">${pills.join("") || "<em>Sem dados adicionais</em>"}</div>
       ${med.note ? `<div style="margin-top:10px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
-    </div>
-
-    <div class="card">
-      <h1>Contatos de Emergência (ICE)</h1>
-      ${iceHtml}
     </div>
 
     <div class="card">
@@ -248,16 +242,6 @@ function render(data){
     </div>
   `;
 
-  // copiar JSON
-  document.getElementById("btnCopiar").onclick = async () => {
-    const txt = JSON.stringify(data);
-    try {
-      await navigator.clipboard.writeText(txt);
-      alert("JSON copiado ✅");
-    } catch {
-      alert("Não consegui copiar automaticamente. Selecione e copie manualmente no bloco de dados.");
-    }
-  };
 }
 
 function decodePayload(hash){
@@ -290,3 +274,4 @@ function decodePayload(hash){
 </script>
 </body>
 </html>
+
