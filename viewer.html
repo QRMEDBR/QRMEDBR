@@ -257,8 +257,6 @@ function render(data){
 
   const pills = [];
   if (med.bt) pills.push(`<span class="pill"><b>Tipo sanguíneo:</b> ${esc(med.bt)}</span>`);
-  if (Array.isArray(med.alg) && med.alg.length) pills.push(`<span class="pill"><b>Alergias:</b> ${esc(med.alg.join(", "))}</span>`);
-  if (Array.isArray(med.cond) && med.cond.length) pills.push(`<span class="pill"><b>Condições:</b> ${esc(med.cond.join(", "))}</span>`);
   if (med.ht) pills.push(`<span class="pill"><b>Altura:</b> ${esc(med.ht)} cm</span>`);
   if (med.wt) pills.push(`<span class="pill"><b>Peso:</b> ${esc(med.wt)} kg</span>`);
 
@@ -358,3 +356,4 @@ function decodePayload(hash){
 </script>
 </body>
 </html>
+
