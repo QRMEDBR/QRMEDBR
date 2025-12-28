@@ -35,12 +35,14 @@
     th{background:var(--subtle);text-align:left}
     .err{color:var(--danger);font-weight:800}
     code{word-break:break-word;background:var(--subtle);padding:2px 4px;border-radius:6px}
+
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     button{
       padding:10px 12px;border:1px solid var(--border);border-radius:10px;
       background:var(--card);color:var(--fg);cursor:pointer;
     }
     button:active{transform:scale(.99)}
+
     a.tel{font-weight:800;text-decoration:none;color:var(--fg)}
     .muted{font-size:12px;color:var(--muted)}
 
@@ -98,6 +100,15 @@
       font-size:13px;
     }
 
+    /* Rodapé (botão + mensagem) */
+    .footer{
+      margin-top:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-start;
+    }
+
     @media print{
       button,.muted{display:none !important}
       body{margin:0}
@@ -110,14 +121,6 @@
 <body>
 <div class="wrap">
 
-  <div class="actions">
-    <button onclick="window.print()">Imprimir</button>
-  </div>
-
-  <div class="muted">
-    QRMEDBR Viewer: os dados são lidos do <code>#</code> da URL e processados localmente no navegador.
-  </div>
-
   <div id="out"></div>
 
   <div class="card">
@@ -127,6 +130,17 @@
       As informações podem estar desatualizadas e <b>não substituem avaliação médica</b>.
       Ao acessar este QR, você concorda em usar os dados <b>somente para cuidado/triagem</b> e evitar compartilhamento indevido.
       (Boas práticas de privacidade/LGPD: minimização, finalidade, necessidade e segurança.)
+    </div>
+  </div>
+
+  <!-- ✅ Botão imprimir + mensagem movidos para o final -->
+  <div class="footer">
+    <div class="actions">
+      <button onclick="window.print()">Imprimir</button>
+    </div>
+
+    <div class="muted">
+      QRMEDBR Viewer: os dados são lidos do <code>#</code> da URL e processados localmente no navegador.
     </div>
   </div>
 
@@ -314,8 +328,6 @@ function render(data){
         </li>`).join("")}</ul>`
     : `<p class="muted"><em>Nenhum contato informado</em></p>`;
 
-  // ✅ Detalhes médicos: remover seções de Alergias e Condições prévias (não renderizar)
-  // ✅ Medicamentos: remover coluna Via
   const rxHtml = (Array.isArray(med.rx) && med.rx.length)
     ? `<table>
         <thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th></tr></thead>
@@ -330,7 +342,6 @@ function render(data){
       </table>`
     : `<p class="muted"><em>Não informado</em></p>`;
 
-  // ✅ Obs: remover do Resumo e colocar em Detalhes, abaixo de Medicamentos
   const noteHtml = med.note
     ? `<div class="note"><b>Observação:</b> ${esc(med.note)}</div>`
     : "";
@@ -347,7 +358,6 @@ function render(data){
 
       ${highlightBlocks}
       ${metrics}
-      <!-- Obs removida daqui -->
     </div>
 
     <div class="card">
@@ -392,4 +402,3 @@ function decodePayload(hash){
 </script>
 </body>
 </html>
-
