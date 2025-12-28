@@ -337,7 +337,7 @@ function render(data){
 
   out.innerHTML = `
     <div class="card emg">
-      <h1>Resumo de Emergência — QRMEDBR</h1>
+      <h1>Resumo de Emergência</h1>
       <div class="grid">
         <div><div class="lbl">Nome</div><div class="val">${esc(pt.n) || "—"}</div></div>
         <div><div class="lbl">Nascimento</div><div class="val">${esc(pt.dob) || "—"}</div></div>
@@ -351,7 +351,7 @@ function render(data){
     </div>
 
     <div class="card">
-      <h1>Contatos de Emergência (ICE)</h1>
+      <h1>Contatos de Emergência</h1>
       ${iceHtml}
     </div>
 
@@ -392,3 +392,4 @@ function decodePayload(hash){
 </script>
 </body>
 </html>
+
