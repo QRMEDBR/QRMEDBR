@@ -44,11 +44,9 @@
     a.tel{font-weight:800;text-decoration:none;color:var(--fg)}
     .muted{font-size:12px;color:var(--muted)}
 
-    /* =========================
-       Destaques no 1º quadro
+    /* Destaques no 1º quadro:
        - Forte: Tipo sanguíneo, Alergias, Condições
-       - Neutro: Altura, Peso
-       ========================= */
+       - Neutro: Altura, Peso */
     .topline{
       display:flex; flex-wrap:wrap; gap:10px;
       margin-top:12px; align-items:stretch;
@@ -90,6 +88,15 @@
     }
     .chip b{font-weight:800}
     .chip .u{opacity:.75; font-size:12px; font-weight:700}
+
+    .note{
+      border-left:4px solid var(--accent);
+      padding:10px 12px;
+      background: var(--subtle);
+      border-radius:10px;
+      margin-top:10px;
+      font-size:13px;
+    }
 
     @media print{
       button,.muted{display:none !important}
@@ -273,7 +280,6 @@ function render(data){
   const algInline = (Array.isArray(med.alg) && med.alg.length) ? med.alg.join(", ") : "";
   const condInline = (Array.isArray(med.cond) && med.cond.length) ? med.cond.join(", ") : "";
 
-  // ✅ ÊNFASE: Tipo sanguíneo + Alergias + Condições
   const highlightBlocks = `
     <div class="topline">
       <div class="hi">
@@ -293,7 +299,6 @@ function render(data){
     </div>
   `;
 
-  // ✅ SEM ÊNFASE: Altura + Peso (chips neutros)
   const metrics = `
     <div class="metrics">
       <span class="chip"><b>Altura:</b> ${esc(med.ht ?? "—")} <span class="u">cm</span></span>
@@ -309,28 +314,26 @@ function render(data){
         </li>`).join("")}</ul>`
     : `<p class="muted"><em>Nenhum contato informado</em></p>`;
 
-  const algHtml = (med.alg && med.alg.length)
-    ? `<ul>${med.alg.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`
-    : `<p class="muted"><em>Não informado</em></p>`;
-
-  const condHtml = (med.cond && med.cond.length)
-    ? `<ul>${med.cond.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`
-    : `<p class="muted"><em>Não informado</em></p>`;
-
+  // ✅ Detalhes médicos: remover seções de Alergias e Condições prévias (não renderizar)
+  // ✅ Medicamentos: remover coluna Via
   const rxHtml = (Array.isArray(med.rx) && med.rx.length)
     ? `<table>
-        <thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th><th>Via</th></tr></thead>
+        <thead><tr><th>Medicamento</th><th>Dose</th><th>Frequência</th></tr></thead>
         <tbody>
           ${med.rx.map(m=>`
             <tr>
               <td>${esc(m.n||"")}</td>
               <td>${esc(m.d||"")}</td>
               <td>${esc(m.f||"")}</td>
-              <td>${esc(m.r||"")}</td>
             </tr>`).join("")}
         </tbody>
       </table>`
     : `<p class="muted"><em>Não informado</em></p>`;
+
+  // ✅ Obs: remover do Resumo e colocar em Detalhes, abaixo de Medicamentos
+  const noteHtml = med.note
+    ? `<div class="note"><b>Observação:</b> ${esc(med.note)}</div>`
+    : "";
 
   out.innerHTML = `
     <div class="card emg">
@@ -344,8 +347,7 @@ function render(data){
 
       ${highlightBlocks}
       ${metrics}
-
-      ${med.note ? `<div style="margin-top:12px"><b>Obs:</b> ${esc(med.note)}</div>` : ""}
+      <!-- Obs removida daqui -->
     </div>
 
     <div class="card">
@@ -355,9 +357,9 @@ function render(data){
 
     <div class="card">
       <h1>Detalhes Médicos</h1>
-      <h2>Alergias</h2>${algHtml}
-      <h2>Condições prévias</h2>${condHtml}
-      <h2>Medicamentos em uso</h2>${rxHtml}
+      <h2>Medicamentos em uso</h2>
+      ${rxHtml}
+      ${noteHtml}
     </div>
   `;
 }
